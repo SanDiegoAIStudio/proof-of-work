@@ -1,0 +1,66 @@
+{
+  "_comment": "Keys that start with an underscore are notes, not jobs. Each job below is an invented example; replace them with your own. window_hours is the span that miss rate, queue delta and item counts are computed over. tier is native (the job calls record itself) or wrapped (pow-run.py records it from outside). Each invariant is its kind, that kind's parameters, and a why sentence saying what red means.",
+  "nightly-backup": {
+    "description": "Copies the documents folder to a second disk every night.",
+    "tier": "wrapped",
+    "window_hours": 168,
+    "invariants": [
+      {
+        "kind": "seen_within_hours",
+        "value": 26,
+        "why": "Red means the backup has not even started in over a day: the schedule is gone or the machine was off."
+      },
+      {
+        "kind": "work_within_hours",
+        "value": 30,
+        "why": "Red means no run has copied anything in over a day, even if runs keep exiting 0. A backup that reports success while copying nothing is the failure this catches."
+      },
+      {
+        "kind": "max_consecutive_not_work",
+        "value": 3,
+        "why": "Red means the last three runs in a row copied nothing or failed, a pattern that one good run earlier in the week could otherwise hide."
+      }
+    ]
+  },
+  "inbox-sync": {
+    "description": "Pulls new messages into the local mailbox every 15 minutes and reports how many are still waiting.",
+    "tier": "native",
+    "window_hours": 24,
+    "invariants": [
+      {
+        "kind": "max_miss_rate",
+        "value": 0.1,
+        "quiet_ok": true,
+        "why": "Red means more than one in ten of the runs that tried to sync failed. A day with nothing to pull is fine, but only when the job itself said there was nothing."
+      },
+      {
+        "kind": "queue_non_increasing",
+        "tolerance": 5,
+        "why": "Red means the waiting backlog grew by more than 5 messages across the day, so the job is falling behind even if every run looks fine."
+      },
+      {
+        "kind": "min_items",
+        "value": 1,
+        "field": "did_work",
+        "why": "Red means not a single message was synced in the whole day, which for a busy mailbox means the sync is connected to nothing."
+      }
+    ]
+  },
+  "weekly-report": {
+    "description": "Builds a summary report every Monday morning and writes it to a shared folder.",
+    "tier": "wrapped",
+    "window_hours": 192,
+    "invariants": [
+      {
+        "kind": "work_within_hours",
+        "value": 200,
+        "why": "Red means no report has been produced in over a week: this week's report is missing."
+      },
+      {
+        "kind": "max_could_not_share",
+        "value": 0.25,
+        "why": "Red means more than a quarter of all runs this week could not build the report, counting quiet runs too."
+      }
+    ]
+  }
+}

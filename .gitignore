@@ -1,0 +1,4 @@
+spine/
+spine-rollup.json
+__pycache__/
+*.pyc
